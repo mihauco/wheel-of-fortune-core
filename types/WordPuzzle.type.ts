@@ -1,6 +1,5 @@
 type WordPuzzle = {
   word: string
-  hint: string
   category: string
 }
 
