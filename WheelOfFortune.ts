@@ -124,7 +124,8 @@ class WheelOfFortune {
       currentPlayerIndex: this.currentPlayerIndex,
       currentPlayerPossibleMoves: this.currentPlayerPossibleMoves,
       currentRoundIndex: this.currentRoundIndex,
-      isFinished: this.isFinished
+      isFinished: this.isFinished,
+      wheel: this.wheel
     }
   }
 
