@@ -14,7 +14,6 @@ class WheelOfFortune {
   private currentRoundIndex: 0 | 1 | 2 | 3 | 4
   private isFinished: boolean
   private vowelPrice: number = 1000
-
   private wheel: Wheel = [
     0,
     25,
@@ -38,7 +37,11 @@ class WheelOfFortune {
     'PRIZE'
   ]
 
-  constructor(playerNames: [string, string, ...string[]], wordPuzzleDictionary: WordPuzzle[]) {
+  constructor(
+    playerNames: [string, string, ...string[]],
+    wordPuzzleDictionary: WordPuzzle[],
+    wheel?: Wheel
+  ) {
     if (wordPuzzleDictionary.length < 5) {
       throw new Error('Wheel of Fortune requires dictionary of at least 5 word puzzles!')
     }
@@ -49,6 +52,10 @@ class WheelOfFortune {
     this.currentPlayerPossibleMoves = ['SPIN']
     this.currentRoundIndex = 0
     this.isFinished = false
+
+    if (wheel) {
+      this.wheel = wheel
+    }
   }
 
   private createPlayers(playerNames: [string, string, ...string[]]): [Player, Player, ...Player[]] {
@@ -108,9 +115,14 @@ class WheelOfFortune {
     // this.currentPlayerMove = 'SPIN'
   }
 
-  private spinTheWheel(): WheelField {
-    const randomIndex = Math.floor(Math.random() * this.wheel.length)
-    return this.wheel[randomIndex]
+  private spinTheWheel(successfullSpinProbability: number = 1): number | null {
+    const successfullSpin = Math.random() < successfullSpinProbability
+
+    if (successfullSpin) {
+      return Math.floor(Math.random() * this.wheel.length)
+    }
+
+    return null
   }
 
   private currentRoundPuzzleHasConosonants(): boolean {
