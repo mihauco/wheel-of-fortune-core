@@ -1,3 +1,3 @@
-type PlayerMove = 'SPIN' | 'GUESS_CONSONANT' | 'GUESS_VOWEL' | 'GUESS_PUZZLE' | 'BUY_VOWEL' | 'PASS'
+type PlayerMove = 'SPIN' | 'GUESS_CONSONANT'| 'SOLVE' | 'BUY_VOWEL' | 'PASS'
 
 export default PlayerMove

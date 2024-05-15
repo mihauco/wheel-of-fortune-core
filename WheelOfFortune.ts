@@ -5,6 +5,15 @@ import GameState from "./types/GameState.type"
 import Wheel from "./types/Wheel.type"
 import PlayerMove from "./types/PlayerMove.type"
 import WheelField from "./types/WheelField.type"
+import { h } from "vue"
+
+type GuessPayload = {
+  guess: string
+}
+
+type SpinPayload = {
+  successfullSpinProbability: number
+}
 
 class WheelOfFortune {
   private players: [Player, Player, ...Player[]]
@@ -141,7 +150,12 @@ class WheelOfFortune {
     }
   }
 
-  makeMove(playerIndex: 0 | 1 | 2 | 3, move: PlayerMove, guess?: string): any {
+  makeMove(playerIndex: number, move: 'SPIN', payload: {successfullSpinProbability: number}): number;
+  makeMove(playerIndex: number, move: 'GUESS_CONSONANT', payload: {guess: string}): number;
+  makeMove(playerIndex: number, move: 'BUY_VOWEL', payload: {guess: string}): any;
+  makeMove(playerIndex: number, move: 'SOLVE', payload: {guess: string}): any;
+  makeMove(playerIndex: number, move: 'PASS'): any;
+  makeMove(playerIndex: number, move: PlayerMove, payload?: {successfullSpinProbability?: number, guess?: string}): any {
     if (this.isFinished) {
       throw new Error('Game is finished!')
     }
@@ -160,33 +174,39 @@ class WheelOfFortune {
 
     switch (move) {
       case 'SPIN': {
-        const wheelField = this.spinTheWheel()
+        const fieldIndex = this.spinTheWheel(payload?.successfullSpinProbability)
+        
+        if (fieldIndex !== null) {
+          const field = this.wheel[fieldIndex]
 
-        if (typeof wheelField === 'number') {
-          this.players[playerIndex].points += wheelField
-          this.currentPlayerPossibleMoves = [ 'GUESS_CONSONANT' ]
-        } else if (wheelField === 'LOSE_TURN') {
-          this.currentPlayerPossibleMoves = []
-        } else if (wheelField === 'BANKRUPT') {
-          this.players[playerIndex].points = 0
-          this.currentPlayerPossibleMoves = []
-        } else if (wheelField === 'PRIZE') {
-          this.currentPlayerPossibleMoves = [ 'GUESS_CONSONANT' ]
+          if (typeof field === 'number') {
+            this.players[playerIndex].points += field
+            this.currentPlayerPossibleMoves = [ 'GUESS_CONSONANT', 'PASS' ]
+          } else if (field === 'LOSE_TURN') {
+            this.currentPlayerPossibleMoves = []
+          } else if (field === 'BANKRUPT') {
+            this.players[playerIndex].points = 0
+            this.currentPlayerPossibleMoves = []
+          } else if (field === 'PRIZE') {
+            this.currentPlayerPossibleMoves = [ 'GUESS_CONSONANT', 'PASS' ]
+          }
         }
 
-        return {}
+        return fieldIndex
       }
       
       case 'GUESS_CONSONANT': {
-        if (!guess || guess.length !== 1 || !guess.match(/[a-z]/i)) {
+        if (!payload?.guess || payload.guess.length !== 1 || !payload.guess.match(/[a-z]/i)) {
           throw new Error('Invalid consonant guess!')
         }
 
-        if (this.rounds[this.currentRoundIndex].puzzle.word.toUpperCase().includes(guess.toUpperCase())) {
+        if (this.rounds[this.currentRoundIndex].puzzle.word.toUpperCase().includes(payload.guess.toUpperCase())) {
+          let hits = 0;
           this.rounds[this.currentRoundIndex].displayWord = this.rounds[this.currentRoundIndex].puzzle.word
             .split('')
             .map((char: string, index: number) => {
-              if (char === guess.toUpperCase()) {
+              if (char === payload.guess?.toUpperCase()) {
+                hits += 1
                 return this.rounds[this.currentRoundIndex].puzzle.word[index]
               }
 
@@ -194,58 +214,47 @@ class WheelOfFortune {
             })
             .join('')
 
-          this.currentPlayerPossibleMoves = [ 'GUESS_PUZZLE', 'BUY_VOWEL', 'PASS' ]
+          this.currentPlayerPossibleMoves = [ 'SOLVE', 'BUY_VOWEL', 'PASS' ]
+
+          return hits
         } else {
           this.currentPlayerPossibleMoves = []
         }
 
-        return {}
-      }
-
-      case 'GUESS_VOWEL': {
-        if (!guess || guess.length !== 1 || !guess.match(/[aeiouy]/i)) {
-          throw new Error('Invalid vowel guess!')
-        }
-
-        if (this.rounds[this.currentRoundIndex].puzzle.word.toUpperCase().includes(guess.toUpperCase())) {
-          this.rounds[this.currentRoundIndex].displayWord = this.rounds[this.currentRoundIndex].puzzle.word
-            .split('')
-            .map((char: string, index: number) => {
-              if (char === guess.toUpperCase()) {
-                return this.rounds[this.currentRoundIndex].puzzle.word[index]
-              }
-
-              return this.rounds[this.currentRoundIndex].displayWord[index]
-            })
-            .join('')
-
-          this.currentPlayerPossibleMoves = [ 'GUESS_PUZZLE', 'BUY_VOWEL', 'PASS' ]
-        } else {
-          this.currentPlayerPossibleMoves = []
-        }
-
-        return {}
+        return 0
       }
 
       case 'BUY_VOWEL': {
-        if (!guess || guess.length !== 1 || !guess.match(/[aeiouy]/i)) {
+        if (!payload?.guess || payload.guess.length !== 1 || !payload.guess.match(/[aeiouy]/i)) {
           throw new Error('Invalid vowel guess!')
         }
 
-        if (this.players[playerIndex].points < this.vowelPrice) {
-          throw new Error('Not enough points to buy a vowel!')
+        if (this.rounds[this.currentRoundIndex].puzzle.word.toUpperCase().includes(payload.guess.toUpperCase())) {
+          this.rounds[this.currentRoundIndex].displayWord = this.rounds[this.currentRoundIndex].puzzle.word
+            .split('')
+            .map((char: string, index: number) => {
+              if (char === payload.guess?.toUpperCase()) {
+                return this.rounds[this.currentRoundIndex].puzzle.word[index]
+              }
+
+              return this.rounds[this.currentRoundIndex].displayWord[index]
+            })
+            .join('')
+
+          this.currentPlayerPossibleMoves = [ 'SOLVE', 'BUY_VOWEL', 'PASS' ]
+        } else {
+          this.currentPlayerPossibleMoves = []
         }
 
-        this.players[playerIndex].points -= this.vowelPrice
-        return this.makeMove(playerIndex, 'GUESS_VOWEL', guess)
+        return {}
       }
 
-      case 'GUESS_PUZZLE': {
-        if (!guess) {
+      case 'SOLVE': {
+        if (!payload?.guess) {
           throw new Error('Guess can\'t be empty!')
         }
 
-        if (guess.toUpperCase() === this.rounds[this.currentRoundIndex].puzzle.word.toUpperCase()) {
+        if (payload.guess.toUpperCase() === this.rounds[this.currentRoundIndex].puzzle.word.toUpperCase()) {
           this.rounds[this.currentRoundIndex].displayWord = this.rounds[this.currentRoundIndex].puzzle.word
           this.rounds[this.currentRoundIndex].isFinished = true
           this.endRound()
