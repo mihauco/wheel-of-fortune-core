@@ -22,6 +22,7 @@ class WheelOfFortune {
   private currentPlayerPossibleMoves: PlayerMove[]
   private currentRoundIndex: 0 | 1 | 2 | 3 | 4
   private isFinished: boolean
+  private pointsToWin: number = 0
   private vowelPrice: number = 1000
   private wheel: Wheel = [
     0,
@@ -180,7 +181,7 @@ class WheelOfFortune {
           const field = this.wheel[fieldIndex]
 
           if (typeof field === 'number') {
-            this.players[playerIndex].points += field
+            this.pointsToWin = field
             this.currentPlayerPossibleMoves = [ 'GUESS_CONSONANT', 'PASS' ]
           } else if (field === 'LOSE_TURN') {
             this.currentPlayerPossibleMoves = []
@@ -205,7 +206,7 @@ class WheelOfFortune {
           this.rounds[this.currentRoundIndex].displayWord = this.rounds[this.currentRoundIndex].puzzle.word
             .split('')
             .map((char: string, index: number) => {
-              if (char === payload.guess?.toUpperCase()) {
+              if (char.toUpperCase() === payload.guess?.toUpperCase()) {
                 hits += 1
                 return this.rounds[this.currentRoundIndex].puzzle.word[index]
               }
@@ -216,11 +217,17 @@ class WheelOfFortune {
 
           this.currentPlayerPossibleMoves = [ 'SOLVE', 'BUY_VOWEL', 'PASS' ]
 
+          if (this.pointsToWin > 0) {
+            this.players[playerIndex].points += this.pointsToWin * hits
+            this.pointsToWin = 0
+          }
+
           return hits
         } else {
           this.currentPlayerPossibleMoves = []
         }
 
+        this.pointsToWin = 0
         return 0
       }
 
@@ -246,6 +253,7 @@ class WheelOfFortune {
           this.currentPlayerPossibleMoves = []
         }
 
+        this.pointsToWin = 0
         return {}
       }
 
@@ -262,6 +270,7 @@ class WheelOfFortune {
           this.currentPlayerPossibleMoves = []
         }
 
+        this.pointsToWin = 0
         return {}
       }
     }
