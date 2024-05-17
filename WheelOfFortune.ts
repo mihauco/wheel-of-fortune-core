@@ -23,7 +23,7 @@ class WheelOfFortune {
   private currentRoundIndex: 0 | 1 | 2 | 3 | 4
   private isFinished: boolean
   private pointsToWin: number = 0
-  private vowelPrice: number = 1000
+  private vowelPrice: number = 10
   private wheel: Wheel = [
     0,
     25,
@@ -161,7 +161,7 @@ class WheelOfFortune {
   makeMove(playerIndex: number, move: 'GUESS_CONSONANT', payload: {guess: string}): number;
   makeMove(playerIndex: number, move: 'BUY_VOWEL', payload: {guess: string}): any;
   makeMove(playerIndex: number, move: 'SOLVE', payload: {guess: string}): any;
-  makeMove(playerIndex: number, move: 'PASS'): any;
+  makeMove(playerIndex: number, move: 'PASS'): void;
   makeMove(playerIndex: number, move: PlayerMove, payload?: {successfullSpinProbability?: number, guess?: string}): any {
     if (this.isFinished) {
       throw new Error('Game is finished!')
@@ -221,7 +221,7 @@ class WheelOfFortune {
             })
             .join('')
 
-          this.currentPlayerPossibleMoves = [ 'SOLVE', 'BUY_VOWEL', 'PASS' ]
+          this.currentPlayerPossibleMoves = [ 'SPIN', 'SOLVE', 'BUY_VOWEL', 'PASS' ]
 
           if (this.pointsToWin > 0) {
             this.players[playerIndex].points += this.pointsToWin * hits
@@ -238,9 +238,15 @@ class WheelOfFortune {
       }
 
       case 'BUY_VOWEL': {
-        if (!payload?.guess || payload.guess.length !== 1 || !payload.guess.match(/[aeiouy]/i)) {
+        if (!payload?.guess || payload.guess.length !== 1 || !payload.guess.match(/[aąeęioóuy]/i)) {
           throw new Error('Invalid vowel guess!')
         }
+
+        if (this.players[playerIndex].points < this.vowelPrice) {
+          throw new Error('Not enough points to buy a vowel!')
+        }
+
+        this.players[playerIndex].points -= this.vowelPrice
 
         if (this.rounds[this.currentRoundIndex].puzzle.word.toUpperCase().includes(payload.guess.toUpperCase())) {
           this.rounds[this.currentRoundIndex].displayWord = this.rounds[this.currentRoundIndex].puzzle.word
@@ -278,6 +284,12 @@ class WheelOfFortune {
 
         this.pointsToWin = 0
         return {}
+      }
+
+      case 'PASS': {
+        console.log('pass')
+        this.endTurn()
+        return
       }
     }
   }
