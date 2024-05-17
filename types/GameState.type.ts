@@ -10,7 +10,8 @@ type GameState = {
   currentPlayerPossibleMoves: PlayerMove[]
   currentRoundIndex: 0 | 1 | 2 | 3 | 4
   isFinished: boolean
-  wheel: Wheel
+  wheel: Wheel,
+  vowelPrice: number
 }
 
 export default GameState

@@ -7,12 +7,12 @@ import PlayerMove from "./types/PlayerMove.type"
 import WheelField from "./types/WheelField.type"
 import { h } from "vue"
 
-type GuessPayload = {
-  guess: string
-}
 
-type SpinPayload = {
-  successfullSpinProbability: number
+type Config = {
+  playerNames: [string, string, ...string[]]
+  wordPuzzleDictionary: WordPuzzle[]
+  wheel?: Wheel,
+  vowelPrice?: number
 }
 
 class WheelOfFortune {
@@ -47,11 +47,12 @@ class WheelOfFortune {
     'PRIZE'
   ]
 
-  constructor(
-    playerNames: [string, string, ...string[]],
-    wordPuzzleDictionary: WordPuzzle[],
-    wheel?: Wheel
-  ) {
+  constructor({
+    playerNames,
+    wordPuzzleDictionary,
+    wheel,
+    vowelPrice
+  }: Config) {
     if (wordPuzzleDictionary.length < 5) {
       throw new Error('Wheel of Fortune requires dictionary of at least 5 word puzzles!')
     }
@@ -65,6 +66,10 @@ class WheelOfFortune {
 
     if (wheel) {
       this.wheel = wheel
+    }
+
+    if (vowelPrice) {
+      this.vowelPrice = vowelPrice
     }
   }
 
@@ -147,7 +152,8 @@ class WheelOfFortune {
       currentPlayerPossibleMoves: this.currentPlayerPossibleMoves,
       currentRoundIndex: this.currentRoundIndex,
       isFinished: this.isFinished,
-      wheel: this.wheel
+      wheel: this.wheel,
+      vowelPrice: this.vowelPrice
     }
   }
 
