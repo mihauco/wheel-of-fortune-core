@@ -144,6 +144,30 @@ class WheelOfFortune {
     return !!this.rounds[this.currentRoundIndex].puzzle.word.match(/bcdfghjklmnprstwxz/i)
   }
 
+  private guessLetter(letter: string): number | null {
+    if (this.rounds[this.currentRoundIndex].guesses.includes(letter)) {
+      return null
+    }
+
+    this.rounds[this.currentRoundIndex].guesses.push(letter)
+
+    let hits = 0;
+
+    this.rounds[this.currentRoundIndex].displayWord = this.rounds[this.currentRoundIndex].puzzle.word
+      .split('')
+      .map((char: string, index: number) => {
+        if (char.toUpperCase() === letter.toUpperCase()) {
+          hits += 1
+          return this.rounds[this.currentRoundIndex].puzzle.word[index]
+        }
+
+        return this.rounds[this.currentRoundIndex].displayWord[index]
+      })
+      .join('')
+
+    return hits
+  }
+
   getState(): GameState {
     return {
       players: this.players,
@@ -158,9 +182,9 @@ class WheelOfFortune {
   }
 
   makeMove(playerIndex: number, move: 'SPIN', payload: {successfullSpinProbability: number}): number;
-  makeMove(playerIndex: number, move: 'GUESS_CONSONANT', payload: {guess: string}): number;
-  makeMove(playerIndex: number, move: 'BUY_VOWEL', payload: {guess: string}): any;
-  makeMove(playerIndex: number, move: 'SOLVE', payload: {guess: string}): any;
+  makeMove(playerIndex: number, move: 'GUESS_CONSONANT', payload: {guess: string}): number | null;
+  makeMove(playerIndex: number, move: 'BUY_VOWEL', payload: {guess: string}): number | null;
+  makeMove(playerIndex: number, move: 'SOLVE', payload: {guess: string}): boolean;
   makeMove(playerIndex: number, move: 'PASS'): void;
   makeMove(playerIndex: number, move: PlayerMove, payload?: {successfullSpinProbability?: number, guess?: string}): any {
     if (this.isFinished) {
@@ -191,36 +215,32 @@ class WheelOfFortune {
             this.currentPlayerPossibleMoves = [ 'GUESS_CONSONANT', 'PASS' ]
           } else if (field === 'LOSE_TURN') {
             this.currentPlayerPossibleMoves = []
+            this.endTurn()
           } else if (field === 'BANKRUPT') {
             this.players[playerIndex].points = 0
             this.currentPlayerPossibleMoves = []
+            this.endTurn()
           } else if (field === 'PRIZE') {
             this.currentPlayerPossibleMoves = [ 'GUESS_CONSONANT', 'PASS' ]
           }
+        } else {
+          this.currentPlayerPossibleMoves = []
+          this.endTurn()
         }
 
         return fieldIndex
       }
       
       case 'GUESS_CONSONANT': {
-        if (!payload?.guess || payload.guess.length !== 1 || !payload.guess.match(/[a-z]/i)) {
+        if (!payload?.guess || payload.guess.length !== 1 || !payload.guess.match(/[bcćdfghjklłmnńprsśtwxzźż]/i)) {
           throw new Error('Invalid consonant guess!')
         }
 
-        if (this.rounds[this.currentRoundIndex].puzzle.word.toUpperCase().includes(payload.guess.toUpperCase())) {
-          let hits = 0;
-          this.rounds[this.currentRoundIndex].displayWord = this.rounds[this.currentRoundIndex].puzzle.word
-            .split('')
-            .map((char: string, index: number) => {
-              if (char.toUpperCase() === payload.guess?.toUpperCase()) {
-                hits += 1
-                return this.rounds[this.currentRoundIndex].puzzle.word[index]
-              }
+        const hits = this.guessLetter(payload.guess)
 
-              return this.rounds[this.currentRoundIndex].displayWord[index]
-            })
-            .join('')
-
+        if (hits === null) return null
+          
+        if (hits > 0) {
           this.currentPlayerPossibleMoves = [ 'SPIN', 'SOLVE', 'BUY_VOWEL', 'PASS' ]
 
           if (this.pointsToWin > 0) {
@@ -229,11 +249,11 @@ class WheelOfFortune {
           }
 
           return hits
-        } else {
-          this.currentPlayerPossibleMoves = []
         }
-
+        
+        this.currentPlayerPossibleMoves = []
         this.pointsToWin = 0
+        this.endTurn()
         return 0
       }
 
@@ -248,25 +268,18 @@ class WheelOfFortune {
 
         this.players[playerIndex].points -= this.vowelPrice
 
-        if (this.rounds[this.currentRoundIndex].puzzle.word.toUpperCase().includes(payload.guess.toUpperCase())) {
-          this.rounds[this.currentRoundIndex].displayWord = this.rounds[this.currentRoundIndex].puzzle.word
-            .split('')
-            .map((char: string, index: number) => {
-              if (char === payload.guess?.toUpperCase()) {
-                return this.rounds[this.currentRoundIndex].puzzle.word[index]
-              }
+        const hits = this.guessLetter(payload.guess)
 
-              return this.rounds[this.currentRoundIndex].displayWord[index]
-            })
-            .join('')
+        if (hits === null) return null
 
-          this.currentPlayerPossibleMoves = [ 'SOLVE', 'BUY_VOWEL', 'PASS' ]
-        } else {
-          this.currentPlayerPossibleMoves = []
+        if (hits > 0) {
+          this.currentPlayerPossibleMoves = [ 'SPIN', 'SOLVE', 'BUY_VOWEL', 'PASS' ]
+          return hits
         }
-
-        this.pointsToWin = 0
-        return {}
+        
+        this.currentPlayerPossibleMoves = []
+        this.endTurn()
+        return 0
       }
 
       case 'SOLVE': {
@@ -274,20 +287,21 @@ class WheelOfFortune {
           throw new Error('Guess can\'t be empty!')
         }
 
+        let correctGuess = false
+
         if (payload.guess.toUpperCase() === this.rounds[this.currentRoundIndex].puzzle.word.toUpperCase()) {
           this.rounds[this.currentRoundIndex].displayWord = this.rounds[this.currentRoundIndex].puzzle.word
           this.rounds[this.currentRoundIndex].isFinished = true
+          correctGuess = true
           this.endRound()
-        } else {
-          this.currentPlayerPossibleMoves = []
         }
 
+        this.currentPlayerPossibleMoves = []
         this.pointsToWin = 0
-        return {}
+        return correctGuess
       }
 
       case 'PASS': {
-        console.log('pass')
         this.endTurn()
         return
       }
