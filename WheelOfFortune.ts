@@ -124,10 +124,17 @@ class WheelOfFortune {
     this.currentPlayerPossibleMoves = ['SPIN']
   }
 
-  private endRound() {
-    // this.currentRound += 1
-    // this.currentPlayer = 0
-    // this.currentPlayerMove = 'SPIN'
+  private endRound(wonPlayerIndex: number) {
+    this.rounds[this.currentRoundIndex].winner = wonPlayerIndex
+    this.rounds[this.currentRoundIndex].isFinished = true
+
+    if (this.currentRoundIndex === 4) {
+      this.isFinished = true
+    } else {
+      this.currentRoundIndex += 1
+      this.currentPlayerIndex = wonPlayerIndex
+      this.currentPlayerPossibleMoves = ['SPIN']
+    }
   }
 
   private spinTheWheel(successfullSpinProbability: number = 1): number | null {
@@ -293,11 +300,12 @@ class WheelOfFortune {
           this.rounds[this.currentRoundIndex].displayWord = this.rounds[this.currentRoundIndex].puzzle.word
           this.rounds[this.currentRoundIndex].isFinished = true
           correctGuess = true
-          this.endRound()
+          this.endRound(playerIndex)
         }
 
         this.currentPlayerPossibleMoves = []
         this.pointsToWin = 0
+        this.endTurn()
         return correctGuess
       }
 
